@@ -99,7 +99,45 @@ parser.add_argument(
 
 args = parser.parse_args()
 
+# ### TODO TEMP ###
+# from gym_minigrid.register import register
+#
+# register(
+#     id='MiniGrid-DelayedMatchingS17Random-v0',
+#     entry_point='gym_minigrid.envs:DelayedMatchingS17Random',
+# )
+#
+# register(
+#     id='MiniGrid-DelayedMatchingS13Random-v0',
+#     entry_point='gym_minigrid.envs:DelayedMatchingS13Random',
+# )
+#
+# register(
+#     id='MiniGrid-DelayedMatchingS13-v0',
+#     entry_point='gym_minigrid.envs:DelayedMatchingS13',
+# )
+#
+# register(
+#     id='MiniGrid-DelayedMatchingS11-v0',
+#     entry_point='gym_minigrid.envs:DelayedMatchingS11',
+# )
+#
+# register(
+#     id='MiniGrid-DelayedMatchingS9-v0',
+#     entry_point='gym_minigrid.envs:DelayedMatchingS9',
+# )
+#
+# register(
+#     id='MiniGrid-DelayedMatchingS7-v0',
+#     entry_point='gym_minigrid.envs:DelayedMatchingS7',
+# )
+# ### TODO TEMP ###
+
 env = gym.make(args.env)
+
+# ### TODO NEED? ###
+# from gym_minigrid.wrappers import FullyObsWrapper
+# env = FullyObsWrapper(env)
 
 if args.agent_view:
     env = RGBImgPartialObsWrapper(env)
