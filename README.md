@@ -27,7 +27,7 @@ To train a model on the environment:
 python3 -m supervised_train --env MiniGrid-DelayedMatchingS4-v0 --model delayedmatching --updates 100000 --save_interval 10 --log_interval 10 --lr 0.001 --seed 123123 --batch_size 256
 ```
 
-### Result
+## Result
 <p align="center">
 <img src="/figures/delayed_matching_result.png" width=700>
 </p>
