@@ -1,3 +1,62 @@
+# Supervised Delayed Matching
+Based on the forked reposository. Original readme follows.
+
+This environment is a memory test similar to the memory environment. At the start of an episode, an item is shown for a brief time. After a random number of delay frames, two test items appear. The 'agent' has to remember the initial object, and select the location containing the matching object.
+
+<p align="center">
+<img src="/figures/delayed_matching.gif" width=180>
+</p>
+
+
+## Code Structure
+
+The environment is gym_minigrid/envs/delayedmatching.py. 
+
+supervised_train.py is the main file. It uses train_mgmt.py and utils.py to train a 3-conv-pool layers with a LSTM layer (from supervised_model.py).
+
+## Basic Usage
+
+From the forked repository, there is a UI application which allows you to manually look at the generated frames:
+
+```
+./manual_control.py --env MiniGrid-DelayedMatchingS7-v0
+```
+
+To train a model on the environment:
+```
+python3 -m supervised_train --env MiniGrid-DelayedMatchingS4-v0 --model delayedmatching --updates 100000 --save_interval 10 --log_interval 10 --lr 0.001 --seed 123123 --batch_size 256
+```
+
+### Result
+<p align="center">
+<img src="/figures/delayed_matching_result.png" width=700>
+</p>
+<p align="center">
+  Accuracy w.r.t number of updates. 
+  Changing color when changing the task difficulty
+</p>
+
+Because the model has difficulty to converge, the model was trained with curriculum learning. The model plateaus at two moments. The first plateau is around 50%. It learns to select one of the two grid-locations containing an object at the last frame, but it doesn't understand the cue from the first frame. The second plateau is around 84%. The appearance of those plateaus is consistent. However, the amount of time spent in those plateaus varies a lot.
+
+The curriculum learning strategy is to increase the delay when the model is able to reach a 100% accuracy at the current level. Therefore, the curriculum learning schedule of the graph is as follows:
+
+|  Update when reaching 100% | Number of Delay frames |
+| ------------- | ------------- |
+| 7080  | 1  |
+| 7150  | 4  |
+| 7170  | 7  |
+| - | reduce batch size from 256 to 128 (out of memory) |
+| 7180  | 10  |
+| 7720  | random(1,10)  |
+| 7850  | random(1,15)  |
+| 7960  | random(1,18)  |
+| 8000  | random(1,20)  |
+| 8060  | random(1,23)  |
+| 8100  | random(1,27)  |
+| 8120  | random(1,30)  |
+
+
+---
 # Minimalistic Gridworld Environment (MiniGrid)
 
 [![Build Status](https://travis-ci.org/maximecb/gym-minigrid.svg?branch=master)](https://travis-ci.org/maximecb/gym-minigrid)
