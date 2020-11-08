@@ -1,10 +1,18 @@
 import csv
 import os
-import torch
 import logging
 import sys
+import random
+import numpy
+import torch
 
-import utils
+
+def seed(seed):
+    random.seed(seed)
+    numpy.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
 
 
 def create_folders_if_necessary(path):
@@ -14,9 +22,7 @@ def create_folders_if_necessary(path):
 
 
 def get_storage_dir():
-    if "RL_STORAGE" in os.environ:
-        return os.environ["RL_STORAGE"]
-    return "storage"
+    return "save"
 
 
 def get_model_dir(model_name):
@@ -34,12 +40,8 @@ def get_status(model_dir):
 
 def save_status(status, model_dir):
     path = get_status_path(model_dir)
-    utils.create_folders_if_necessary(path)
+    create_folders_if_necessary(path)
     torch.save(status, path)
-
-
-def get_vocab(model_dir):
-    return get_status(model_dir)["vocab"]
 
 
 def get_model_state(model_dir):
@@ -48,7 +50,7 @@ def get_model_state(model_dir):
 
 def get_txt_logger(model_dir):
     path = os.path.join(model_dir, "log.txt")
-    utils.create_folders_if_necessary(path)
+    create_folders_if_necessary(path)
 
     logging.basicConfig(
         level=logging.INFO,
@@ -64,6 +66,6 @@ def get_txt_logger(model_dir):
 
 def get_csv_logger(model_dir):
     csv_path = os.path.join(model_dir, "log.csv")
-    utils.create_folders_if_necessary(csv_path)
+    create_folders_if_necessary(csv_path)
     csv_file = open(csv_path, "a")
     return csv_file, csv.writer(csv_file)

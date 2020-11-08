@@ -12,101 +12,199 @@ class DelayedMatchingEnv(MiniGridEnv):
         self,
         seed,
         size=8,
-        random_length=False,
+        tile_size=32,
+        max_delay=30
     ):
-        self.random_length = random_length
-        super().__init__(
+        self.tile_size = tile_size
+        self.max_frames_delay = max_delay
+        super(DelayedMatchingEnv, self).__init__(
             seed=seed,
             grid_size=size,
             max_steps=5*size**2,
             # Set this to True for maximum speed
             see_through_walls=False,
         )
+        self.observation_space.spaces['image'] = spaces.Box(
+            low=0,
+            high=255,
+            shape=(self.width * tile_size, self.height * tile_size, 3),
+            dtype='uint8'
+        )
 
     def _gen_grid(self, width, height):
         self.grid = Grid(width, height)
 
-        # Generate the surrounding walls
-        self.grid.horz_wall(0, 0)
-        self.grid.horz_wall(0, height-1)
-        self.grid.vert_wall(0, 0)
-        self.grid.vert_wall(width - 1, 0)
+        def cst(low,high):
+            return low
 
-        assert height % 2 == 1
-        upper_room_wall = height // 2 - 2
-        lower_room_wall = height // 2 + 2
-        if self.random_length:
-            hallway_end = self._rand_int(4, width - 2)
-        else:
-            hallway_end = width - 3
-
-        # Fix the player's start position and orientation
-        self.agent_pos = (self._rand_int(1, hallway_end + 1), height // 2)
-        self.agent_dir = 0
-
+        random_fct = self._rand_float
+        # random_fct = cst
 
         # Create the 3 objects
         type_objets = {Circle, Triangle, Square}
 
         cue_type = self._rand_elem(type_objets)
-        cue_obj = cue_type(scale=self._rand_float(0.0, 0.6), color=self._rand_color())
+        cue_obj = cue_type(color=self._rand_color(), random_fct=random_fct)
         type_objets.discard(cue_type) # remove cue object type from type left
 
         second_type = self._rand_elem(type_objets)
 
-        matching_obj = cue_type(scale=self._rand_float(0.0, 0.6), color=self._rand_color())  # test object matching cue
-        second_obj = second_type(scale=self._rand_float(0.0, 0.6), color=self._rand_color()) # random second object
+        self.matching_obj = cue_type(color=self._rand_color(), random_fct=random_fct)  # test object matching cue
+        self.second_obj = second_type(color=self._rand_color(), random_fct=random_fct) # random second object
 
-        # Place cue object
-        cue_pos = self.place_obj(cue_obj)
+        self.cue_pos = self.place_obj(cue_obj)
 
-        #TODO Delay
+        self.nb_delay_frames = self._rand_int(1, self.max_frames_delay)
+        # self.nb_delay_frames = 1
 
-        # Remove cue obj
-        self.grid.set(*cue_pos, None)
+        self.mission = 'Select the matching object'
 
-        # Place test objects
-        matching_pos = self.place_obj(matching_obj)
-        second_pos = self.place_obj(second_obj)
+    def step(self, action=''):
+        label = -1
+        done = False
 
-        self.success_pos = (matching_pos[0], matching_pos[1])
-        self.failure_pos = (second_pos[0], second_pos[1])
+        if self.step_count < self.nb_delay_frames:
+            # Remove cue obj
+            self.grid.set(*self.cue_pos, None)
 
+        if self.step_count == self.nb_delay_frames:
+            # Place test objects
+            self.matching_pos = self.place_obj(self.matching_obj)
+            second_pos = self.place_obj(self.second_obj)
 
-        # self.grid.set(1, height // 2 - 1, start_room_obj(scale=self._rand_float(0.0, 0.4), color=self._rand_color()))
-        # other_objs = self._rand_elem([[Triangle, Square], [Square, Triangle]])
-        # pos0 = (hallway_end + 1, height // 2 - 2)
-        # pos1 = (hallway_end + 1, height // 2 + 2)
-        # self.grid.set(*pos0, other_objs[0](self._rand_color()))
-        # self.grid.set(*pos1, other_objs[1](self._rand_color()))
-        #
-        # # Choose the target objects
-        # if start_room_obj == other_objs[0]:
-        #     self.success_pos = (pos0[0], pos0[1])
-        #     self.failure_pos = (pos1[0], pos1[1])
-        # else:
-        #     self.success_pos = (pos1[0], pos1[1])
-        #     self.failure_pos = (pos0[0], pos0[1])
-
-        self.mission = 'go to the matching object'
-
-    def step(self, action):
-        if action == MiniGridEnv.Actions.pickup:
-            action = MiniGridEnv.Actions.toggle
-        obs, reward, done, info = MiniGridEnv.step(self, action)
-
-        if tuple(self.agent_pos) == self.success_pos:
-            reward = self._reward()
-            done = True
-        if tuple(self.agent_pos) == self.failure_pos:
-            reward = 0
+        if self.step_count >= self.nb_delay_frames + 1:
+            label = self.matching_pos[1] + (self.matching_pos[0]*self.height)
             done = True
 
-        return obs, reward, done, info
+        obs = self.gen_obs()['image']
+
+        self.step_count += 1
+        return obs, label, done, {}
+
+    def reset(self):
+        self._gen_grid(self.width, self.height)
+
+        # Step count since episode start
+        self.step_count = 0
+
+        # first observation
+        obs = self.gen_obs()['image']
+        return obs
+
+    def gen_obs(self):
+        """
+        Generate the observation. Here, it is the complete grid.
+        """
+        rgb_img = self.render(
+            mode='rgb_array',
+            tile_size=self.tile_size
+        )
+        return {
+            'mission': self.mission,
+            'image': rgb_img
+        }
+
+    def render(self, mode='human', close=False, tile_size=TILE_PIXELS):
+        """
+        Render the whole-grid human view
+        """
+        if close:
+            if self.window:
+                self.window.close()
+            return
+
+        if mode == 'human' and not self.window:
+            import gym_minigrid.window
+            self.window = gym_minigrid.window.Window('gym_minigrid')
+            self.window.show(block=False)
+
+        # Render the whole grid
+        img = self.grid.render(
+            tile_size
+        )
+
+        if mode == 'human':
+            self.window.show_img(img)
+            self.window.set_caption(self.mission)
+
+        return img
+
+class Circle(WorldObj):
+    def __init__(self, random_fct, color='blue'):
+        super(Circle, self).__init__('circle', color)
+        scale = random_fct(0.0, 0.6)
+        self.radius = 0.31*(1-scale)
+
+        # default center is at the middle
+        self.cx = 0.5
+        self.cy = 0.5
+
+        # Translation space available
+        max_right = 0.95 - self.cx - self.radius # right limit - x coordinate of center - radius
+        max_left = self.cx - self.radius - 0.05 # x coordinate of center - radius - left limit
+        max_up = 0.95 - self.cy - self.radius # up limit - y coordinate of center - radius
+        max_down = self.cy - self.radius - 0.05 # y coordinate of center - down limit - radius
+
+        self.cx = random_fct(self.cx - max_left, self.cx + max_right)
+        self.cy = random_fct(self.cy - max_down, self.cy + max_up)
+
+    def render(self, img):
+        fill_coords(img, point_in_circle(self.cx, self.cy, self.radius), COLORS[self.color])
+
+class Triangle(WorldObj):
+    def __init__(self, random_fct, color='blue'):
+        super(Triangle, self).__init__('triangle', color)
+        self.scale = random_fct(0.0, 0.6)
+
+        # Resize
+        a = (0.12*(1+self.scale), 0.12*(1+self.scale))
+        b = ((0.12*(1+self.scale) + 0.88*(1-self.scale))/2, 0.78*(1-self.scale))
+        c = (0.88*(1-self.scale), 0.12*(1+self.scale))
+
+        # Translation space available
+        up = 0.95 - b[1] # cord[1] + up => move at max up
+        down = a[1] - 0.05 # cord[1] - down => move at max down
+        right = a[0] - 0.05 # cord[0] - right => move at max right
+        left = 0.95 - c[0] # cord[0] + left  => move at max left
+
+        # default position is in the bottom right and have almost no empty space to move more in that direction
+        move_up = random_fct(0.0, 1.0) < up # ~85% chance of moving up, ~15% to move down
+        move_right = random_fct(0.0, 1.0) < right
+
+        if move_up:
+            translate_y = random_fct(0, up)
+        else:
+            translate_y = - random_fct(0, down)
+
+        if move_right:
+            translate_x = -random_fct(0, right)
+        else:
+            translate_x = random_fct(0, left)
+
+        self.a = (a[0] + translate_x, a[1] + translate_y)
+        self.b = (b[0] + translate_x, b[1] + translate_y)
+        self.c = (c[0] + translate_x, c[1] + translate_y)
+
+    def render(self, img):
+        tri_fn = point_in_triangle(self.a, self.b, self.c)
+        tri_fn = rotate_fn(tri_fn, cx=0.5, cy=0.5, theta=0.5 * math.pi * 2)
+        fill_coords(img, tri_fn, COLORS[self.color])
+
+class Square(WorldObj):
+    def __init__(self, random_fct, color='blue'):
+        super(Square, self).__init__('square', color)
+        self.max_x = random_fct(0.55, 0.88)
+        self.min_y = random_fct(0.12, 0.45)
+        self.min_x = random_fct(0.12, 0.45)
+        side_size = self.max_x - self.min_x
+        self.max_y = self.min_y + side_size
+
+    def render(self, img):
+        fill_coords(img, point_in_rect(self.min_x, self.max_x, self.min_y, self.max_y), COLORS[self.color])
 
 class DelayedMatchingS17Random(DelayedMatchingEnv):
     def __init__(self, seed=None):
-        super().__init__(seed=seed, size=17, random_length=True)
+        super().__init__(seed=seed, size=17)
 
 register(
     id='MiniGrid-DelayedMatchingS17Random-v0',
@@ -115,7 +213,7 @@ register(
 
 class DelayedMatchingS13Random(DelayedMatchingEnv):
     def __init__(self, seed=None):
-        super().__init__(seed=seed, size=13, random_length=True)
+        super().__init__(seed=seed, size=13)
 
 register(
     id='MiniGrid-DelayedMatchingS13Random-v0',
@@ -156,4 +254,22 @@ class DelayedMatchingS7(DelayedMatchingEnv):
 register(
     id='MiniGrid-DelayedMatchingS7-v0',
     entry_point='gym_minigrid.envs:DelayedMatchingS7',
+)
+
+class DelayedMatchingS3(DelayedMatchingEnv):
+    def __init__(self, seed=None):
+        super().__init__(seed=seed, size=3)
+
+register(
+    id='MiniGrid-DelayedMatchingS3-v0',
+    entry_point='gym_minigrid.envs:DelayedMatchingS3',
+)
+
+class DelayedMatchingS4(DelayedMatchingEnv):
+    def __init__(self, seed=None):
+        super().__init__(seed=seed, size=4)
+
+register(
+    id='MiniGrid-DelayedMatchingS4-v0',
+    entry_point='gym_minigrid.envs:DelayedMatchingS4',
 )

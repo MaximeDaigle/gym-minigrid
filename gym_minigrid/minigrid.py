@@ -47,9 +47,9 @@ OBJECT_TO_IDX = {
     'goal'          : 8,
     'lava'          : 9,
     'agent'         : 10,
-    'circle': 11,
-    'triangle': 12,
-    'square': 13,
+    'circle'        : 11,
+    'triangle'      : 12,
+    'square'        : 13,
 }
 
 IDX_TO_OBJECT = dict(zip(OBJECT_TO_IDX.values(), OBJECT_TO_IDX.keys()))
@@ -179,7 +179,6 @@ class Floor(WorldObj):
         # Give the floor a pale color
         color = COLORS[self.color] / 2
         fill_coords(img, point_in_rect(0.031, 1, 0.031, 1), color)
-
 
 class Lava(WorldObj):
     def __init__(self):
@@ -328,55 +327,6 @@ class Box(WorldObj):
         # Replace the box by its contents
         env.grid.set(*pos, self.contains)
         return True
-
-class Circle(WorldObj):
-    def __init__(self, color='blue', scale=0.0):
-        super(Circle, self).__init__('circle', color)
-        self.scale = scale
-
-    def can_overlap(self):
-        """Can the agent overlap with this?"""
-        return True
-
-    def render(self, img):
-        fill_coords(img, point_in_circle(0.5, 0.5, 0.31*(1-self.scale)), COLORS[self.color])
-
-class Triangle(WorldObj):
-    def __init__(self,color='blue', scale=0.0):
-        super(Triangle, self).__init__('triangle', color)
-        self.scale = scale
-
-    def can_overlap(self):
-        """Can the agent overlap with this?"""
-        return True
-
-    def render(self, img):
-        a = (0.12*(1+self.scale), 0.12*(1+self.scale))
-        b = ((0.12*(1+self.scale) + 0.88*(1-self.scale))/2, 0.78*(1-self.scale))
-        c = (0.88*(1-self.scale), 0.12*(1+self.scale))
-        tri_fn = point_in_triangle(a,b,c)
-        tri_fn = rotate_fn(tri_fn, cx=0.5, cy=0.5, theta=0.5 * math.pi * 2)
-        fill_coords(img, tri_fn, COLORS[self.color])
-
-class Square(WorldObj):
-    def __init__(self, color='blue', scale=0.0):
-        super(Square, self).__init__('square', color)
-        self.scale = scale
-
-    def can_overlap(self):
-        """Can the agent overlap with this?"""
-        return True
-
-    def render(self, img):
-        minimum = 0.12
-        maximum = 0.88
-        low = minimum*(1+self.scale)
-        high = maximum*(1-self.scale)
-        fill_coords(img, point_in_rect(low, high, low, high), COLORS[self.color])
-        # fill_coords(img, point_in_rect(0.12, 0.88, 0.12, 0.88), COLORS[self.color])
-
-
-
 
 class Grid:
     """
@@ -821,6 +771,9 @@ class MiniGridEnv(gym.Env):
             'box'           : 'B',
             'goal'          : 'G',
             'lava'          : 'V',
+            'circle'        : 'C',
+            'triangle'      : 'T',
+            'square'        : 'S',
         }
 
         # Short string for opened door
