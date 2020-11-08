@@ -36,7 +36,7 @@ python3 -m supervised_train --env MiniGrid-DelayedMatchingS4-v0 --model delayedm
   Changing color when changing the task difficulty
 </p>
 
-Because the model has difficulty to converge, the model was trained with curriculum learning. The model plateaus at two moments. The first plateau is around 50%. It learns to select one of the two grid-locations containing an object at the last frame, but it doesn't understand the cue from the first frame. The second plateau is around 84%. The appearance of those plateaus is consistent. However, the amount of time spent in those plateaus varies a lot.
+Because the model had difficulty to converge, the model was trained with curriculum learning. The model plateaus at two moments. The first plateau is around 50%. It learns to select one of the two grid-locations containing an object at the last frame, but it doesn't understand the cue from the first frame. The second plateau is around 84%. The appearance of those plateaus is consistent. However, the amount of time spent in those plateaus varies a lot.
 
 The curriculum learning strategy is to increase the delay when the model is able to reach a 100% accuracy at the current level. Therefore, the curriculum learning schedule of the graph is as follows:
 
