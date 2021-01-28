@@ -1,7 +1,7 @@
 # Supervised Delayed Matching
-Based on the forked reposository. Original readme follows.
+Add an environment and a model to the forked reposository. Original readme is below.
 
-This environment is a memory test similar to the memory environment. At the start of an episode, an item is shown for a brief time. After a random number of delay frames, two test items appear. The 'agent' has to remember the initial object, and select the location containing the matching object.
+This environment allows to test the memory of neural networks. At the start of an episode, an item is shown for a brief time. After a random number of delay frames, two test items appear. The 'agent' has to remember the initial object, and select the location containing the matching object.
 
 <p align="center">
 <img src="/figures/delayed_matching.gif" width=180>
